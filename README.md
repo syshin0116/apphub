@@ -344,11 +344,44 @@ This is primarily a personal infrastructure project, but contributions and sugge
 
 MIT License - see LICENSE file for details.
 
-## Documentation
+## 📚 Documentation
 
 Detailed documentation is available in the `/docs` directory, including:
 - API specifications
 - Deployment guides
 - Architecture decisions
 - Project integration examples
+- Monorepo structure guide
+- Docker development workflow
+
+## 🏗️ Architecture Overview
+
+```
+Internet → Nginx → [Web App (Next.js) ↔ AI Service (LangGraph)] → Supabase
+           ↓
+        Static Files
+```
+
+### Service Communication
+- **Web App**: Serves UI, handles authentication, makes API calls
+- **AI Service**: Processes LangGraph workflows, handles AI logic
+- **Nginx**: Reverse proxy, load balancing, static file serving
+- **Supabase**: Database, authentication, real-time features
+
+## 🚀 Next Steps
+
+1. **Complete Core Services** (Phase 2)
+   - Supabase integration
+   - Authentication system
+   - Basic dashboard UI
+
+2. **Add More Features** (Phase 3)
+   - RAG system implementation
+   - Project management interface
+   - Monitoring and logging
+
+3. **Production Deployment** (Phase 4)
+   - GCP deployment setup
+   - CI/CD pipeline
+   - Performance optimization
 
