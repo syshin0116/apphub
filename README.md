@@ -269,44 +269,71 @@ This microservices approach allows each component to be optimized for its specif
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- Python 3.9+
-- Supabase account
-- GCP account (for initial deployment)
+- Node.js 20+
+- Python 3.11+
+- uv (Python package manager)
+- pnpm (Node.js package manager)
+- Docker & Docker Compose
+- Make (optional, but recommended)
 
 ### Installation
 
-1. Clone the repository
+1. **Clone the repository**
 ```bash
 git clone https://github.com/[username]/apphub.git
 cd apphub
 ```
 
-2. Install dependencies
+2. **Quick Start (권장)**
 ```bash
-# Frontend
-cd web-platform
-npm install
+# 전체 개발 환경 시작 (Docker 사용)
+make start
 
-# Backend
-cd ../langgraph-server
-pip install -r requirements.txt
+# 또는 개별 명령어로
+make install  # 의존성 설치
+make dev      # Docker로 전체 환경 실행
 ```
 
-3. Environment setup
+3. **로컬 개발 (선택사항)**
 ```bash
-cp .env.example .env
-# Configure your environment variables
+# 의존성 설치
+pnpm install
+
+# 개별 서비스 실행
+make web          # 웹 앱 (http://localhost:3000)
+make ai-service   # AI 서비스 (http://localhost:8000)
 ```
 
+<<<<<<< HEAD
 >>>>>>> d0ad83d (feat: project structure)
 4. Development setup
 ```bash
 # Start frontend
 npm run dev
+=======
+### 🔧 Available Commands
+>>>>>>> 0a66f00 (feat: project structure)
 
-# Start LangGraph server
-langgraph dev
+```bash
+# 도움말
+make help
+
+# 개발 환경
+make dev          # Docker로 전체 환경 실행
+make start        # 설치 + Docker 환경 실행
+make web          # 웹 앱만 실행
+make ai-service   # AI 서비스만 실행
+
+# Docker 관리
+make docker-dev   # Docker 개발 환경
+make docker-prod  # Docker 프로덕션 환경
+make docker-down  # Docker 환경 중지
+make logs         # Docker 로그 확인
+
+# 프로젝트 관리
+make build        # 전체 프로젝트 빌드
+make test         # 테스트 실행
+make clean        # 빌드 파일 정리
 ```
 
 ## Contributing
