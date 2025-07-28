@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Python LangGraph 서비스
+  ai-service:
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    container_name: apphub-ai-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../apps/ai-service:/app
+      - ../logs/ai-service:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=DEBUG
+    networks:
+      - apphub-network
+    restart: unless-stopped
+
+  # Next.js 웹 앱
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: apphub-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../apps/web:/app/apps/web
+      - ../logs/web:/app/logs
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://ai-service:8000
+    networks:
+      - apphub-network
+    depends_on:
+      - ai-service
+    restart: unless-stopped
+
+  # Nginx (리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    container_name: apphub-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ../logs/nginx:/var/log/nginx
+    networks:
+      - apphub-network
+    depends_on:
+      - web
+      - ai-service
+    restart: unless-stopped
+
+networks:
+  apphub-network:
+    driver: bridge
+
+volumes:
+  ai-service-logs:
+  web-logs:
+  nginx-logs: 

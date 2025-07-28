@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Python LangGraph 서비스 (프로덕션)
+  ai-service:
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    container_name: apphub-ai-service-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../logs/ai-service:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+    networks:
+      - apphub-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Next.js 웹 앱 (프로덕션)
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: apphub-web-prod
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../logs/web:/app/logs
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://ai-service:8000
+    networks:
+      - apphub-network
+    depends_on:
+      - ai-service
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Nginx (프로덕션 리버스 프록시)
+  nginx:
+    image: nginx:alpine
+    container_name: apphub-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ../logs/nginx:/var/log/nginx
+      - ./ssl:/etc/nginx/ssl
+    networks:
+      - apphub-network
+    depends_on:
+      - web
+      - ai-service
+    restart: unless-stopped
+
+networks:
+  apphub-network:
+    driver: bridge
+
+volumes:
+  ai-service-logs:
+  web-logs:
+  nginx-logs: 
