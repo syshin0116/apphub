@@ -65,6 +65,7 @@ AppHub is a comprehensive infrastructure platform designed to eliminate repetiti
 ## Project Structure
 
 ```
+<<<<<<< HEAD
 AppHub
 <<<<<<< HEAD
 ├── langgraph-server/     # Python AI services
@@ -147,19 +148,23 @@ cp .env.example .env
 ```
 
 =======
+=======
+AppHub/
+>>>>>>> fcc0471 (fix: resolve conflict)
 ├── apps/
 │   ├── ai-service/          # LangGraph AI 서비스
 │   │   ├── src/agent/       # LangGraph 에이전트
 │   │   ├── tests/           # 테스트
 │   │   ├── pyproject.toml   # Python 의존성
+│   │   ├── uv.lock          # uv 잠금 파일
 │   │   ├── langgraph.json   # LangGraph 설정
-│   │   ├── Dockerfile
-│   │   └── .venv/
+│   │   ├── Dockerfile       # Docker 설정
+│   │   └── .venv/           # 가상환경
 │   └── web/                # Next.js + shadcn-ui 프론트엔드
-│       ├── app/
-│       ├── components/
-│       ├── package.json
-│       ├── Dockerfile
+│       ├── app/             # Next.js App Router
+│       ├── components/      # React 컴포넌트
+│       ├── package.json     # Node.js 의존성
+│       ├── Dockerfile       # Docker 설정
 │       └── ...
 ├── packages/
 │   ├── eslint-config/      # 공유 ESLint 설정
@@ -183,90 +188,6 @@ cp .env.example .env
 ```
 
 ## Quick Start
-
-### 방법 1: Make 사용 (권장)
-```bash
-# 도움말 보기
-make help
-
-# 전체 개발 환경 시작 (Docker 사용)
-make start        # Docker로 전체 환경 실행
-make dev          # Docker로 전체 환경 실행 (별칭)
-
-# 로컬 개발 환경
-make start-local  # 로컬 환경 설정
-make web          # 웹 앱만 실행 (http://localhost:3000)
-make ai-service   # AI 서비스만 실행 (http://localhost:8000)
-
-# Docker 관리
-make docker-dev   # Docker 개발 환경
-make docker-prod  # Docker 프로덕션 환경
-make docker-down  # Docker 환경 중지
-make logs         # Docker 로그 확인
-```
-
-### 방법 2: pnpm 스크립트 사용
-```bash
-# 의존성 설치
-pnpm install
-
-# 개발 환경
-pnpm dev          # 웹 앱 개발 서버
-pnpm docker:dev   # Docker로 전체 환경 실행
-pnpm docker:logs  # Docker 로그 확인
-```
-
-### 방법 3: 직접 실행
-```bash
-# 웹 앱
-cd apps/web && pnpm dev
-
-# AI 서비스
-cd apps/ai-service && python main.py
-
-# Docker
-docker-compose -f docker/docker-compose.yml up --build -d
-```
-
-## Development Roadmap
-
-### ✅ Phase 1: Infrastructure Setup (완료)
-- ✅ Monorepo 구조 설정 (Turborepo + pnpm workspaces)
-- ✅ LangGraph AI 서비스 기반 구축
-- ✅ NextJS + ShadCN UI 웹 플랫폼 구축
-- ✅ Docker 컨테이너화 및 개발 환경 구성
-- ✅ Nginx 리버스 프록시 설정
-
-### 🚧 Phase 2: Core Services Development (진행중)
-- 🔄 Supabase 데이터베이스 통합
-- 🔄 Authentication system 구현
-- 🔄 Dashboard UI 개발
-- 🔄 기본 RAG 시스템 설정
-- Project management interface
-
-### Phase 3: Production Readiness
-- Performance optimization
-- Security hardening
-- Monitoring and logging
-- First project migration
-
-### Phase 4: Home Server Migration
-- Hardware preparation
-- Network configuration
-- Gradual migration from cloud
-
-## Why This Architecture
-
-### Technical Decision
-While JavaScript/TypeScript-based LLM services (Vercel AI SDK, LangChain.js) offer excellent web integration, the latest AI features and research typically debut in the Python ecosystem first. LangGraph CLI enables clean separation between AI services and web applications while leveraging the most advanced capabilities.
-
-### Scalability Strategy
-This microservices approach allows each component to be optimized for its specific purpose:
-- AI logic utilizes Python's rich ecosystem
-- Web interface leverages NextJS's performance
-- Database operations benefit from Supabase's managed services
-
-## Getting Started
 
 ### Prerequisites
 - Node.js 20+
@@ -336,23 +257,43 @@ make test         # 테스트 실행
 make clean        # 빌드 파일 정리
 ```
 
-## Contributing
+### pnpm 스크립트 사용
+```bash
+# 의존성 설치
+pnpm install
 
-This is primarily a personal infrastructure project, but contributions and suggestions are welcome through issues and pull requests.
+# 개발 환경
+pnpm dev          # 웹 앱 개발 서버
+pnpm docker:dev   # Docker로 전체 환경 실행
+pnpm docker:logs  # Docker 로그 확인
+```
 
-## License
+## Features
 
-MIT License - see LICENSE file for details.
+### Infrastructure
+- Monorepo structure with Turborepo + pnpm workspaces
+- LangGraph AI service foundation
+- NextJS + ShadCN UI web platform
+- Docker containerization and development environment
+- Nginx reverse proxy
 
-## 📚 Documentation
+### Planned
+- Supabase database integration
+- Authentication system
+- Dashboard UI
+- RAG system
+- Project management interface
 
-Detailed documentation is available in the `/docs` directory, including:
-- API specifications
-- Deployment guides
-- Architecture decisions
-- Project integration examples
-- Monorepo structure guide
-- Docker development workflow
+## Why This Architecture
+
+### Technical Decision
+While JavaScript/TypeScript-based LLM services (Vercel AI SDK, LangChain.js) offer excellent web integration, the latest AI features and research typically debut in the Python ecosystem first. LangGraph CLI enables clean separation between AI services and web applications while leveraging the most advanced capabilities.
+
+### Scalability Strategy
+This microservices approach allows each component to be optimized for its specific purpose:
+- AI logic utilizes Python's rich ecosystem
+- Web interface leverages NextJS's performance
+- Database operations benefit from Supabase's managed services
 
 ## 🏗️ Architecture Overview
 
@@ -368,20 +309,13 @@ Internet → Nginx → [Web App (Next.js) ↔ AI Service (LangGraph)] → Supaba
 - **Nginx**: Reverse proxy, load balancing, static file serving
 - **Supabase**: Database, authentication, real-time features
 
-## 🚀 Next Steps
+## Contributing
 
-1. **Complete Core Services** (Phase 2)
-   - Supabase integration
-   - Authentication system
-   - Basic dashboard UI
+This is primarily a personal infrastructure project, but contributions and suggestions are welcome through issues and pull requests.
 
-2. **Add More Features** (Phase 3)
-   - RAG system implementation
-   - Project management interface
-   - Monitoring and logging
+## License
 
-3. **Production Deployment** (Phase 4)
-   - GCP deployment setup
-   - CI/CD pipeline
-   - Performance optimization
+MIT License - see LICENSE file for details.
+
+
 
