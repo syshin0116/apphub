@@ -65,9 +65,7 @@ AppHub is a comprehensive infrastructure platform designed to eliminate repetiti
 ## Project Structure
 
 ```
-<<<<<<< HEAD
 AppHub
-<<<<<<< HEAD
 ├── langgraph-server/     # Python AI services
 ├── web-platform/         # NextJS frontend
 ├── shared/              # Common utilities and types
@@ -148,9 +146,6 @@ cp .env.example .env
 ```
 
 =======
-=======
-AppHub/
->>>>>>> fcc0471 (fix: resolve conflict)
 ├── apps/
 │   ├── ai-service/          # LangGraph AI 서비스
 │   │   ├── src/agent/       # LangGraph 에이전트
@@ -225,15 +220,7 @@ make web          # 웹 앱 (http://localhost:3000)
 make ai-service   # AI 서비스 (http://localhost:8000)
 ```
 
-<<<<<<< HEAD
->>>>>>> d0ad83d (feat: project structure)
-4. Development setup
-```bash
-# Start frontend
-npm run dev
-=======
 ### 🔧 Available Commands
->>>>>>> 0a66f00 (feat: project structure)
 
 ```bash
 # 도움말
