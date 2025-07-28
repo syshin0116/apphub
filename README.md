@@ -54,11 +54,13 @@ AppHub is a comprehensive infrastructure platform designed to eliminate repetiti
 
 ## Technology Stack
 
-- **AI/ML Backend**: Python, LangGraph, LangChain
-- **Web Frontend**: NextJS, React, TypeScript, ShadCN UI
+- **AI/ML Backend**: Python, LangGraph, LangChain, uv
+- **Web Frontend**: NextJS, React, TypeScript, ShadCN UI, pnpm
 - **Database**: Supabase (PostgreSQL), Redis
 - **Authentication**: Supabase Auth
-- **Deployment**: GCP (initial), Home Server (future)
+- **Infrastructure**: Docker, Docker Compose, Nginx
+- **Build Tools**: Turborepo, Make, pnpm workspaces
+- **Deployment**: Docker containers, GCP (initial), Home Server (future)
 
 ## Project Structure
 
@@ -228,16 +230,18 @@ docker-compose -f docker/docker-compose.yml up --build -d
 
 ## Development Roadmap
 
-### Phase 1: GCP Infrastructure Setup
-- GCP project setup with free tier
-- Basic LangGraph server deployment
-- NextJS platform foundation
-- Supabase integration
+### ✅ Phase 1: Infrastructure Setup (완료)
+- ✅ Monorepo 구조 설정 (Turborepo + pnpm workspaces)
+- ✅ LangGraph AI 서비스 기반 구축
+- ✅ NextJS + ShadCN UI 웹 플랫폼 구축
+- ✅ Docker 컨테이너화 및 개발 환경 구성
+- ✅ Nginx 리버스 프록시 설정
 
-### Phase 2: Core Services Development
-- Authentication system implementation
-- Dashboard UI development
-- Basic RAG system setup
+### 🚧 Phase 2: Core Services Development (진행중)
+- 🔄 Supabase 데이터베이스 통합
+- 🔄 Authentication system 구현
+- 🔄 Dashboard UI 개발
+- 🔄 기본 RAG 시스템 설정
 - Project management interface
 
 ### Phase 3: Production Readiness
