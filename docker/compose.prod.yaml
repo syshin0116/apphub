@@ -1,0 +1,122 @@
+services:
+  # Traefik reverse proxy (production)
+  traefik:
+    image: traefik:v2.10
+    container_name: apphub-traefik-prod
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=apphub-network"
+      - "--providers.docker.watch=true"
+      - "--providers.docker.refreshseconds=15"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - apphub-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.your-domain.com`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$2y$$10$$hashedpassword"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Python LangGraph service (production)
+  ai-service:
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    container_name: apphub-ai-service-prod
+    volumes:
+      - ../logs/ai-service:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+    networks:
+      - apphub-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai-service.rule=Host(`your-domain.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.ai-service.entrypoints=web"
+      - "traefik.http.routers.ai-service-secure.rule=Host(`your-domain.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.ai-service-secure.entrypoints=websecure"
+      - "traefik.http.routers.ai-service-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ai-service.middlewares=ai-service-stripprefix"
+      - "traefik.http.routers.ai-service-secure.middlewares=ai-service-stripprefix"
+      - "traefik.http.middlewares.ai-service-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.services.ai-service.loadbalancer.server.port=8000"
+      - "traefik.docker.network=apphub-network"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Next.js web application (production)
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: apphub-web-prod
+    volumes:
+      - ../logs/web:/app/logs
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://your-domain.com/api
+    networks:
+      - apphub-network
+    depends_on:
+      - ai-service
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`your-domain.com`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.routers.web-secure.rule=Host(`your-domain.com`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.web-secure.entrypoints=websecure"
+      - "traefik.http.routers.web-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+      - "traefik.docker.network=apphub-network"
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.sslRedirect=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.routers.web-secure.middlewares=security-headers"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+networks:
+  apphub-network:
+    driver: bridge 

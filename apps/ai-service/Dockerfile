@@ -1,28 +1,50 @@
-# LangGraph 서비스용 Dockerfile (uv 사용)
-FROM python:3.11-slim
+# LangGraph service Dockerfile (using uv)
+FROM python:3.11-slim AS builder
 
-# 작업 디렉토리 설정
+# Install uv from official distroless image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set working directory
 WORKDIR /app
 
-# 시스템 패키지 업데이트 및 필요한 패키지 설치
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies (separate layer for better caching)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    uv sync --locked --no-install-project
 
-# uv 설치
-RUN pip install uv
-
-# Python 의존성 파일 복사
-COPY pyproject.toml uv.lock ./
-
-# uv를 사용하여 의존성 설치
-RUN uv sync --frozen
-
-# 소스 코드 복사
+# Copy project source code
 COPY . .
 
-# 포트 노출 (LangGraph 서비스 포트)
+# Install project in non-editable mode for production
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-editable
+
+# Production stage
+FROM python:3.11-slim
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+
+# Activate virtual environment
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
 EXPOSE 8000
 
-# LangGraph 서비스 실행 (uv 사용)
-CMD ["uv", "run", "langgraph", "dev", "--host", "0.0.0.0", "--port", "8000"] 
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+
+# Run LangGraph service
+CMD ["langgraph", "dev", "--host", "0.0.0.0", "--port", "8000"] 

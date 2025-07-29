@@ -233,8 +233,8 @@ make web          # 웹 앱만 실행
 make ai-service   # AI 서비스만 실행
 
 # Docker 관리
-make docker-dev   # Docker 개발 환경
-make docker-prod  # Docker 프로덕션 환경
+make docker-dev   # Docker 개발 환경 (compose.yaml)
+make docker-prod  # Docker 프로덕션 환경 (compose.prod.yaml)
 make docker-down  # Docker 환경 중지
 make logs         # Docker 로그 확인
 
@@ -262,7 +262,7 @@ pnpm docker:logs  # Docker 로그 확인
 - LangGraph AI service foundation
 - NextJS + ShadCN UI web platform
 - Docker containerization and development environment
-- Nginx reverse proxy
+- Traefik reverse proxy with automatic service discovery
 
 ### Planned
 - Supabase database integration
@@ -284,16 +284,13 @@ This microservices approach allows each component to be optimized for its specif
 
 ## 🏗️ Architecture Overview
 
-```
-Internet → Nginx → [Web App (Next.js) ↔ AI Service (LangGraph)] → Supabase
-           ↓
-        Static Files
-```
+![](https://i.imgur.com/sg4zOY1.png)
+
 
 ### Service Communication
 - **Web App**: Serves UI, handles authentication, makes API calls
 - **AI Service**: Processes LangGraph workflows, handles AI logic
-- **Nginx**: Reverse proxy, load balancing, static file serving
+- **Traefik**: Reverse proxy, automatic service discovery, SSL termination
 - **Supabase**: Database, authentication, real-time features
 
 ## Contributing
