@@ -1,4 +1,4 @@
-# LangGraph service Dockerfile (using uv)
+# LangGraph service Dockerfile (supports both development and production)
 FROM python:3.11-slim AS builder
 
 # Install uv from official distroless image
@@ -16,9 +16,14 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy project source code
 COPY . .
 
-# Install project in non-editable mode for production
+# Install project (editable for dev, non-editable for prod)
+ARG INSTALL_MODE=editable
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-editable
+    if [ "$INSTALL_MODE" = "editable" ]; then \
+        uv sync --locked; \
+    else \
+        uv sync --locked --no-editable; \
+    fi
 
 # Production stage
 FROM python:3.11-slim
