@@ -8,10 +8,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Install dependencies (separate layer for better caching)
+# Use only pyproject.toml to avoid requiring uv.lock
+COPY pyproject.toml ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    uv sync --locked --no-install-project
+    uv sync --no-install-project
 
 # Copy project source code
 COPY . .
@@ -20,9 +20,9 @@ COPY . .
 ARG INSTALL_MODE=editable
 RUN --mount=type=cache,target=/root/.cache/uv \
     if [ "$INSTALL_MODE" = "editable" ]; then \
-        uv sync --locked; \
+        uv sync; \
     else \
-        uv sync --locked --no-editable; \
+        uv sync --no-editable; \
     fi
 
 # Production stage
@@ -34,22 +34,18 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 # Set working directory
 WORKDIR /app
 
-# Copy virtual environment from builder stage
-COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+# Copy virtual environment from builder stage to a path outside the app mount
+COPY --from=builder --chown=appuser:appuser /app/.venv /opt/venv
 
 # Activate virtual environment
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Switch to non-root user
 USER appuser
 
 # Expose port
 EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
 # Run LangGraph service
 CMD ["langgraph", "dev", "--host", "0.0.0.0", "--port", "8000"] 
