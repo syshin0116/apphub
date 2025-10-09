@@ -1,13 +1,12 @@
-"""LangGraph single-node graph template.
-
-Returns a predefined response. Replace logic and configuration as needed.
-"""
+"""LangGraph agent with PostgreSQL checkpoint."""
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any, Dict
 
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import StateGraph
 from langgraph.runtime import Runtime
 from typing_extensions import TypedDict
@@ -45,10 +44,16 @@ async def call_model(state: State, runtime: Runtime[Context]) -> Dict[str, Any]:
     }
 
 
-# Define the graph
+# Define the graph with PostgreSQL checkpointer
+database_url = os.getenv(
+    "DATABASE_URL",
+    "postgresql://apphub:apphub_dev_password@localhost:5432/apphub",
+)
+checkpointer = PostgresSaver.from_conn_string(database_url)
+
 graph = (
     StateGraph(State, context_schema=Context)
     .add_node(call_model)
     .add_edge("__start__", "call_model")
-    .compile(name="New Graph")
+    .compile(name="AppHub Agent", checkpointer=checkpointer)
 )
