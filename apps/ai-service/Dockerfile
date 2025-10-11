@@ -10,7 +10,6 @@ COPY pyproject.toml ./
 COPY uv.lock ./
 COPY langgraph.json ./
 COPY src ./src
-COPY .env .env
 
 # Install dependencies
 RUN uv sync --frozen
