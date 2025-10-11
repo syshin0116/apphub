@@ -1,6 +1,6 @@
 ---
 title: AppHub와 Quartz 블로그 통합 전략
-date: 2025-10-07
+date: 2025-10-06
 tags:
   - AppHub
   - Projects
@@ -453,6 +453,6 @@ AppHub: AI 챗봇이 찾아줌, 위키링크로 연결됨, 대화하면서 탐�
 
 ## 관련 문서
 
-- [[2025-06-28-AppHub-개인-프로젝트-플랫폼-기획]] - AppHub 전체 기획
-- [[2025-07-26-AppHub-구조-및-기술-스택]] - 기술 스택 상세
+- [[2025-10-06-AppHub-개인-프로젝트-플랫폼-기획]] - AppHub 전체 기획
+- [[2025-10-07-AppHub-구조-및-기술-스택]] - 기술 스택 상세
 - [[Quartz, GitHub Pages 사용하여 Obsidian 노트 배포]] - 현재 Quartz 설정
