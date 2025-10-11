@@ -6,11 +6,12 @@ import os
 from typing import Annotated, Literal
 from pydantic import Field
 
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from typing_extensions import TypedDict
-from langchain.chat_models import init_chat_model
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
+import psycopg
 
 
 class ContextSchema(TypedDict):
@@ -68,27 +69,47 @@ def calculator_tool(expression: str) -> str:
         return f"Error: {str(e)}"
 
 
-# Initialize AsyncPostgresSaver with database connection
+# Database connection string for checkpointer
 database_url = os.getenv(
     "DATABASE_URL",
     "postgresql://apphub:apphub_dev_password@localhost:5432/apphub",
 )
-checkpointer = AsyncPostgresSaver.from_conn_string(database_url)
 
-# Initialize the language model
-model = init_chat_model(
-    model=os.getenv("DEFAULT_MODEL", "openai:gpt-4.1"),
-    temperature=0,
-)
 
-# Define available tools
-tools = [search_tool, calculator_tool]
+def make_checkpointer():
+    """Create AsyncPostgresSaver with connection pool.
 
-# Create ReAct agent with AsyncPostgresSaver checkpointer
+    This factory function is called by LangGraph in an async context,
+    ensuring the event loop is available for pool initialization.
+    """
+    # Connection pool configuration:
+    # - autocommit=True: Required for setup() to properly commit checkpoint tables
+    # - prepare_threshold=0: Prevents "prepared statement already exists" errors
+    # - row_factory=dict_row: Required by PostgresSaver implementation
+    connection_kwargs = {
+        "autocommit": True,
+        "prepare_threshold": 0,
+        "row_factory": psycopg.rows.dict_row,
+    }
+
+    # Create async connection pool
+    # This is called within an async context by LangGraph, so event loop is available
+    pool = AsyncConnectionPool(
+        conninfo=database_url,
+        kwargs=connection_kwargs,
+        min_size=1,
+        max_size=10,
+    )
+
+    # Initialize AsyncPostgresSaver with connection pool
+    # NOTE: setup() should be run once via scripts/init_checkpointer.py before first use
+    return AsyncPostgresSaver(pool)
+
+# Create ReAct agent with AsyncPostgresSaver checkpointer factory
 graph = create_agent(
     model="openai:gpt-4.1",
-    tools=tools,
-    checkpointer=checkpointer,
+    tools=[search_tool, calculator_tool],
+    checkpointer=make_checkpointer,  # Pass factory function, not instance
     name="AppHub ReAct Agent",
     system_prompt=(
         "You are a helpful AI assistant with access to tools. "

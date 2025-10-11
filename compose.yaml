@@ -7,9 +7,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-apphub}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apphub_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-apphub}
+      TZ: Asia/Seoul
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     networks:
@@ -26,8 +29,12 @@ services:
     image: redis:7-alpine
     container_name: apphub-redis
     command: redis-server --appendonly yes
+    environment:
+      TZ: Asia/Seoul
     volumes:
       - redis-data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - "${REDIS_PORT:-6379}:6379"
     networks:
@@ -47,6 +54,8 @@ services:
     container_name: apphub-ai-service
     volumes:
       - ./apps/ai-service/src:/app/src
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     environment:
       - PYTHONPATH=/app
       - DATABASE_URL=postgresql://${POSTGRES_USER:-apphub}:${POSTGRES_PASSWORD:-apphub_dev_password}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-apphub}
@@ -55,6 +64,7 @@ services:
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-apphub}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - TZ=Asia/Seoul
     ports:
       - "${AI_SERVICE_PORT:-2024}:2024"
     networks:
