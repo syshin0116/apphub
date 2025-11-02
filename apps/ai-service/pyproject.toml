@@ -1,23 +1,33 @@
 [project]
-name = "agent"
-version = "0.0.1"
-description = "Starter template for making a new agent LangGraph."
+name = "apphub-ai-service"
+version = "0.1.0"
+description = "AppHub AI Service - LangGraph v1.0 & LangChain v1.0 based intelligent agent with blog search RAG capabilities."
 authors = [
-    { name = "William Fu-Hinthorn", email = "13333726+hinthornw@users.noreply.github.com" },
+    { name = "AppHub Team", email = "syshin0116@gmail.com" },
 ]
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
-    "asyncpg>=0.30.0",
-    "langchain>=1.0.0a14",
+    # Core AI Framework (v1.0 Stable - Released 2025-10-22)
+    "langchain>=1.0.0",
+    "langgraph>=1.0.2",
+
+    # LLM Providers
     "langchain-anthropic>=0.3.22",
     "langchain-openai>=0.3.35",
-    "langgraph>=1.0.0a4",
-    "langgraph-checkpoint-postgres>=2.0.0",
     "openai>=2.2.0",
+
+    # AI Monitoring & Observability (2025 Latest)
+    "langsmith>=0.2.0",
+
+    # Database & Vector Store
+    "asyncpg>=0.30.0",
+    "langgraph-checkpoint-postgres>=2.0.0",
     "pgvector>=0.4.1",
     "psycopg[binary]>=3.2.10",
+
+    # Utilities
     "python-dotenv>=1.0.1",
 ]
 
