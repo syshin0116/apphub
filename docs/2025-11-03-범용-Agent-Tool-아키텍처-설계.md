@@ -39,42 +39,43 @@ description: Manus의 계층형 액션 공간을 적용한 도메인 독립적 A
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Level 1: Atomic Functions                      │
+│  Level 1: Atomic Functions (4-5개만!)           │
 │  ─────────────────────────────────              │
-│  LangGraph @tool 데코레이터                     │
-│  10-20개 고정된 원자적 함수                     │
-│  • 컨텍스트 최소화                              │
-│  • 스키마 안전 (constraint decoding)            │
-│  • KV 캐시 친화적                               │
+│  진짜 원자적 Linux 명령어 수준                  │
+│  • file_read, file_write, file_list             │
+│  • shell_execute (유일한 관문!)                 │
+│  • 컨텍스트 최소화 (고정 4-5개)                 │
+│  • KV 캐시 친화적 (절대 변하지 않음)            │
 └─────────────────────────────────────────────────┘
-              ↓ offload
+              ↓ shell_execute 호출
 ┌─────────────────────────────────────────────────┐
 │  Level 2: CLI Utilities                         │
 │  ─────────────────────────────────              │
 │  셸 명령으로 호출 가능한 유틸리티               │
-│  • MCP 통합 지점                                │
+│  • knowledge-search (검색 CLI)                  │
+│  • mcp-cli (MCP 통합)                           │
 │  • --help로 자가 문서화                         │
-│  • 함수 공간을 건드리지 않음                    │
-│  • 출력 → 파일 → grep/cat 처리                  │
+│  • 함수 공간을 건드리지 않음 (0개!)             │
+│  • 출력 → 파일 → file_read로 읽기               │
 └─────────────────────────────────────────────────┘
-              ↓ offload
+              ↓ Python 스크립트 실행
 ┌─────────────────────────────────────────────────┐
 │  Level 3: Domain Implementations                │
 │  ─────────────────────────────────              │
 │  Python 런타임 활용                             │
-│  • 대량 데이터 처리                             │
-│  • 도메인별 비즈니스 로직                       │
-│  • 외부 서비스 통합 (Neo4j, Qdrant)             │
+│  • 대량 데이터 처리 (Qdrant, Neo4j)             │
+│  • 도메인별 비즈니스 로직 (blog, e-commerce)    │
+│  • 외부 서비스 통합                             │
 └─────────────────────────────────────────────────┘
 ```
 
 ### 계층별 책임
 
-| 계층 | 책임 | 노출 방식 | 컨텍스트 영향 |
-|------|------|-----------|--------------|
-| **Level 1** | 원자적 작업 | LangGraph `@tool` | 고정 10-20개 |
-| **Level 2** | 복잡한 유틸리티 | CLI (`shell_execute`) | 0개 (함수 공간 X) |
-| **Level 3** | 도메인 로직 | Python 스크립트 | 0개 (런타임만) |
+| 계층 | 책임 | 노출 방식 | 컨텍스트 영향 | 예시 |
+|------|------|-----------|--------------|------|
+| **Level 1** | Linux 명령어 수준 | LangGraph `@tool` | **4-5개 고정** | file_read, shell_execute |
+| **Level 2** | CLI 유틸리티 | `shell_execute()` 호출 | **0개** (함수 공간 X) | knowledge-search, mcp-cli |
+| **Level 3** | 도메인 로직 | `shell_execute("python ...")` | **0개** (런타임만) | BlogHybridRetriever |
 
 ---
 
@@ -135,212 +136,100 @@ class BaseTool(ABC):
         return wrapper
 ```
 
-### 도메인 독립적 Level 1 함수 설계
+### Level 1: 진짜 원자적 함수만!
+
+> [!important] Level 1의 진정한 의미
+> Linux 기본 명령어처럼 **정말 분해 불가능한 원자적 작업**만 포함한다. 복잡한 로직은 전부 Level 2/3로!
+
+**전체 5-6개만 유지:**
 
 ```python
-# packages/agent-tools/src/level1/file_ops.py
+# packages/agent-tools/src/level1/core.py
 
 from langchain_core.tools import tool
 from pathlib import Path
-from typing import Optional
+import subprocess
 
 @tool
-async def file_read(
-    path: str,
-    start_line: Optional[int] = None,
-    end_line: Optional[int] = None
-) -> str:
+def file_read(path: str) -> str:
     """
-    파일 읽기 (도메인 독립적)
+    파일 읽기
 
-    Args:
-        path: 파일 경로
-        start_line: 시작 라인 (선택)
-        end_line: 종료 라인 (선택)
-
-    Returns:
-        파일 내용 또는 라인 범위
+    Example:
+        file_read("/tmp/data.json")
     """
-    content = Path(path).read_text()
-
-    if start_line or end_line:
-        lines = content.splitlines()
-        start = start_line or 0
-        end = end_line or len(lines)
-        return "\n".join(lines[start:end])
-
-    return content
+    return Path(path).read_text()
 
 @tool
-async def file_write(path: str, content: str, mode: str = "w") -> str:
+def file_write(path: str, content: str) -> str:
     """
-    파일 쓰기 (도메인 독립적)
+    파일 쓰기
 
-    Args:
-        path: 파일 경로
-        content: 파일 내용
-        mode: 쓰기 모드 ('w', 'a')
-
-    Returns:
-        성공 메시지
+    Example:
+        file_write("/tmp/output.txt", "Hello World")
     """
     Path(path).write_text(content)
-    return f"File written successfully: {path}"
+    return f"✓ {path}"
 
 @tool
-async def file_list(directory: str, pattern: str = "*") -> list[str]:
+def file_list(directory: str, pattern: str = "*") -> str:
     """
-    디렉토리 파일 목록 (도메인 독립적)
+    파일 목록 (glob)
 
-    Args:
-        directory: 디렉토리 경로
-        pattern: glob 패턴
-
-    Returns:
-        파일 경로 리스트
+    Example:
+        file_list("/tmp", "*.json")
     """
-    return [str(p) for p in Path(directory).glob(pattern)]
-```
-
-### 검색 추상화
-
-```python
-# packages/agent-tools/src/level1/search.py
-
-from langchain_core.tools import tool
-from typing import List, Dict, Any
+    files = [str(p) for p in Path(directory).glob(pattern)]
+    return "\n".join(files)
 
 @tool
-async def semantic_search(
-    query: str,
-    collection: str,
-    top_k: int = 5,
-    filters: Dict[str, Any] | None = None
-) -> List[Dict[str, Any]]:
+def shell_execute(command: str) -> str:
     """
-    의미 기반 검색 (도메인 독립적)
+    셸 명령 실행 - Level 2/3로 가는 유일한 관문!
 
-    Args:
-        query: 검색 쿼리
-        collection: 검색 대상 컬렉션
-        top_k: 반환 개수
-        filters: 필터 조건 (선택)
+    Example:
+        shell_execute("knowledge-search search --query 'AI' --collection blog")
+        shell_execute("python analyze.py --input data.json")
+        shell_execute("grep -r 'TODO' src/")
 
     Returns:
-        검색 결과 리스트 (id, score, metadata 포함)
-
-    Note:
-        실제 구현은 Level 3에서 주입됨 (DI 패턴)
+        출력 (1000자 초과 시 파일 경로)
     """
-    # CLI 호출로 위임
-    import subprocess
-    import json
-
-    cmd = [
-        "knowledge-search",
-        "--query", query,
-        "--collection", collection,
-        "--top-k", str(top_k)
-    ]
-
-    if filters:
-        cmd.extend(["--filters", json.dumps(filters)])
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # 결과 파일 경로 반환 (컨텍스트 최소화!)
-    output_file = result.stdout.strip()
-    return f"Search results saved to: {output_file}. Use file_read to access."
-
-@tool
-async def keyword_search(
-    keywords: str,
-    collection: str,
-    top_k: int = 5
-) -> str:
-    """
-    키워드 검색 (도메인 독립적)
-
-    Returns:
-        검색 결과 파일 경로
-    """
-    # Level 2 CLI로 위임
-    pass
-
-@tool
-async def hybrid_search(
-    query: str,
-    collection: str,
-    top_k: int = 5,
-    semantic_weight: float = 0.7
-) -> str:
-    """
-    하이브리드 검색 (의미 + 키워드)
-
-    Returns:
-        검색 결과 파일 경로
-    """
-    # Level 2 CLI로 위임
-    pass
-```
-
-### 실행 추상화
-
-```python
-# packages/agent-tools/src/level1/execute.py
-
-from langchain_core.tools import tool
-
-@tool
-async def shell_execute(command: str, timeout: int = 30) -> str:
-    """
-    셸 명령 실행 (도메인 독립적)
-
-    이것이 Level 2/3로 가는 관문!
-
-    Args:
-        command: 실행할 명령
-        timeout: 타임아웃 (초)
-
-    Returns:
-        명령 출력 또는 출력 파일 경로
-    """
-    import subprocess
-    import tempfile
-
     result = subprocess.run(
         command,
         shell=True,
         capture_output=True,
         text=True,
-        timeout=timeout
+        timeout=60
     )
 
-    # 출력이 크면 파일로 저장
+    # 출력이 크면 파일로 저장 (컨텍스트 오프로드!)
     if len(result.stdout) > 1000:
+        import tempfile
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
             f.write(result.stdout)
-            return f"Output saved to: {f.name}"
+            return f"Output saved: {f.name}"
 
     return result.stdout
 
-@tool
-async def python_execute(script_path: str, args: list[str] | None = None) -> str:
-    """
-    Python 스크립트 실행 (Level 3 진입점)
+# 끝! 이게 전부!
+# semantic_search, hybrid_search 같은 건 Level 2 CLI로 구현
+```
 
-    Args:
-        script_path: 스크립트 경로
-        args: 명령행 인자
+**semantic_search는 이제 Level 2 CLI로:**
 
-    Returns:
-        실행 결과
-    """
-    cmd = f"python {script_path}"
-    if args:
-        cmd += " " + " ".join(args)
+```python
+# Agent가 사용하는 방식
 
-    return await shell_execute(cmd)
+# ❌ 이전 (Level 1에 semantic_search 도구)
+semantic_search(query="AI agents", collection="blog", top_k=5)
+
+# ✅ 현재 (shell_execute로 Level 2 CLI 호출)
+shell_execute("knowledge-search search --query 'AI agents' --collection blog --top-k 5")
+# → Output: /tmp/search_results_abc123.json
+
+# 결과 읽기
+file_read("/tmp/search_results_abc123.json")
 ```
 
 ---
@@ -996,20 +885,18 @@ build-backend = "setuptools.build_meta"
 
 from langgraph.graph import StateGraph, MessagesState
 from agent_tools.level1 import (
-    file_read, file_write, file_list,
-    semantic_search, hybrid_search,
-    shell_execute, python_execute
+    file_read,
+    file_write,
+    file_list,
+    shell_execute
 )
 
-# Level 1 도구만 등록 (10-20개)
+# Level 1 도구만 등록 (4개!)
 TOOLS = [
     file_read,
     file_write,
     file_list,
-    semantic_search,
-    hybrid_search,
-    shell_execute,
-    python_execute,
+    shell_execute,  # 이것이 Level 2/3로 가는 유일한 관문
 ]
 
 # Agent 정의
@@ -1019,6 +906,25 @@ def create_agent():
     # ... (agent 로직)
 
     return workflow.compile()
+```
+
+**Agent 사용 예시:**
+
+```python
+# Agent가 내부적으로 이렇게 사용:
+
+# 1. 블로그 검색
+shell_execute("knowledge-search search --query 'LangChain' --collection blog --top-k 5")
+# → /tmp/search_abc.json
+
+# 2. 결과 읽기
+file_read("/tmp/search_abc.json")
+
+# 3. 네트워크 분석
+shell_execute("python analyze_blog_network.py --output stats.json")
+
+# 4. 분석 결과 읽기
+file_read("stats.json")
 ```
 
 ### CLI 사용 (Level 2)
