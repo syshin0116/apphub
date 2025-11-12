@@ -7,11 +7,13 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from langchain.agents import create_agent
-from langchain_core.tools import tool
 from typing_extensions import TypedDict
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 import psycopg
+
+# Import agent-tools
+from agent_tools import SessionSandbox, create_atomic_tools
 
 
 class ContextSchema(TypedDict):
@@ -36,37 +38,49 @@ class ContextSchema(TypedDict):
     ]
 
 
-# Define example tools for the ReAct agent
-@tool
-def search_tool(query: str) -> str:
-    """Search for information on the web.
+# Helper function to create user agent with sandboxed tools
+def create_user_agent(user_id: str, session_id: str, checkpointer_factory):
+    """
+    Create user-specific agent with sandboxed tools
 
     Args:
-        query: The search query string
+        user_id: User ID
+        session_id: Session ID (thread_id)
+        checkpointer_factory: Checkpointer factory function
 
     Returns:
-        Search results as a string
+        Compiled LangGraph agent
     """
-    # Placeholder implementation
-    return f"Search results for: {query}"
+    # Create session sandbox (isolated workspace)
+    sandbox = SessionSandbox(user_id=user_id, session_id=session_id)
 
+    # Create atomic tools (4 only!)
+    tools = create_atomic_tools(sandbox)
 
-@tool
-def calculator_tool(expression: str) -> str:
-    """Perform mathematical calculations.
+    # Create agent
+    agent = create_agent(
+        model="openai:gpt-4.1",
+        tools=tools,
+        checkpointer=checkpointer_factory,
+        name=f"Agent-{user_id}",
+        system_prompt=(
+            f"You are a helpful AI assistant for user {user_id}.\n\n"
+            "You have access to 4 atomic tools:\n"
+            "1. file_read(path) - Read files\n"
+            "2. file_write(path, content) - Write files\n"
+            "3. file_list(directory, pattern) - List files with glob patterns\n"
+            "4. shell_execute(command) - Execute shell commands (gateway to advanced features)\n\n"
+            f"Your working directory: {sandbox.sandbox_dir}\n"
+            "All file operations are restricted to this directory for security.\n\n"
+            "For complex tasks, use shell_execute to call Linux commands:\n"
+            "- grep, find, awk: Text processing\n"
+            "- python scripts: Data analysis\n"
+            "- Future: knowledge-search (semantic search), mcp-cli (MCP tools)\n\n"
+            "Think step by step and explain your reasoning.\n"
+        ),
+    )
 
-    Args:
-        expression: A mathematical expression to evaluate
-
-    Returns:
-        The calculation result
-    """
-    try:
-        # Safe eval for basic math operations
-        result = eval(expression, {"__builtins__": {}}, {})
-        return str(result)
-    except Exception as e:
-        return f"Error: {str(e)}"
+    return agent, sandbox
 
 
 # Database connection string for checkpointer
@@ -105,15 +119,23 @@ def make_checkpointer():
     # NOTE: setup() should be run once via scripts/init_checkpointer.py before first use
     return AsyncPostgresSaver(pool)
 
-# Create ReAct agent with AsyncPostgresSaver checkpointer factory
-graph = create_agent(
-    model="openai:gpt-4.1",
-    tools=[search_tool, calculator_tool],
-    checkpointer=make_checkpointer,  # Pass factory function, not instance
-    name="AppHub ReAct Agent",
-    system_prompt=(
-        "You are a helpful AI assistant with access to tools. "
-        "Use the search tool to find information and the calculator tool for math operations. "
-        "Think step by step and explain your reasoning."
-    ),
-)
+# Legacy: Create default agent (backward compatibility)
+# For production, use create_user_agent() instead
+def _create_default_graph():
+    """Create default agent for backward compatibility"""
+    sandbox = SessionSandbox(user_id="default", session_id="default")
+    tools = create_atomic_tools(sandbox)
+
+    return create_agent(
+        model="openai:gpt-4.1",
+        tools=tools,
+        checkpointer=make_checkpointer,
+        name="AppHub Agent",
+        system_prompt=(
+            "You are a helpful AI assistant with access to file operations and shell commands.\n"
+            "Think step by step and explain your reasoning."
+        ),
+    )
+
+# Default graph instance
+graph = _create_default_graph()

@@ -29,6 +29,9 @@ dependencies = [
 
     # Utilities
     "python-dotenv>=1.0.1",
+
+    # Agent Tools
+    "apphub-agent-tools",
 ]
 
 
